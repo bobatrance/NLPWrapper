@@ -17,7 +17,7 @@ public class GuiApp {
 
     private static void createMainWindow() {
 
-        JFrame frame = new JFrame("Segmenter and POS TagSegmentger");
+        JFrame frame = new JFrame("Segmenter and POS Tagger");
 
         try {
             // theme

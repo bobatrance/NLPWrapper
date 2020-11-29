@@ -1,13 +1,15 @@
 package com.bobatrance.NLPWrapper;
 
 import java.io.FileNotFoundException;
-import java.io.FileReader;
+// import java.io.FileReader;
 import java.io.IOException;
+import java.io.InputStreamReader;
 import java.io.FileInputStream;
 import java.io.ObjectInputStream;
 import java.io.PrintStream;
 import java.io.BufferedReader;
 import java.io.File;
+import java.nio.charset.Charset;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Properties;
@@ -29,9 +31,15 @@ import edu.stanford.nlp.tagger.maxent.MaxentTagger;
 
 public class NLPHelper {
 
+    static final Charset enc = Charset.forName("UTF-8");
     static final String segmentData = ".\\segmenter\\";
     static final String taggerData = ".\\tagger\\";
     static String outputFilePath = "";
+
+    public static enum NLPProcess {
+        SEGMENT,
+        POSTAG
+    }
 
     public static void runProcessing(HashSet<File> filesToProcess, SegmentModel segModel, TaggerModel tagModel) {
         if(filesToProcess.size() == 0) {
@@ -60,7 +68,7 @@ public class NLPHelper {
         // -serDictionary .\data\dict-chris6.ser.gz
 
         Properties props = new Properties();
-        props.setProperty("inputEncoding", "UTF-8");
+        props.setProperty("inputEncoding", enc.toString());
         props.setProperty("sighanPostProcessing", "true");
         props.setProperty("keepAllWhitespaces", "false");
         CRFClassifier classifier = new CRFClassifier(props);
@@ -94,7 +102,7 @@ public class NLPHelper {
             classifier.loadClassifier(ois, classifierProps);
             //if(filesToProcess.size() == 1) {
             for(File file : filesToProcess) {
-                createOutputFile(FilenameUtils.getBaseName(file.getName()) + "-segmented" );
+                createOutputFile(file, NLPProcess.SEGMENT);
                 // hack to capture the classifier answer
                 PrintStream stdout = System.out;
                 System.setOut(new PrintStream(outputFilePath));
@@ -127,10 +135,12 @@ public class NLPHelper {
     
         }
         for (File file : filesToProcess) {
-            createOutputFile(FilenameUtils.getBaseName(file.getName()) + "-tagged" );
+            createOutputFile(file, NLPProcess.POSTAG);
             List<List<HasWord>> sentences = null;
             try {
-                FileReader fr = new FileReader(".\\output\\" + FilenameUtils.getBaseName(file.getName()) + "-segmented.txt");
+                //Java8 doesn't support this
+                //FileReader fr = new FileReader(file.getAbsoluteFile().getParent() + "\\" + FilenameUtils.getBaseName(file.getName()) + "-segmented.txt", enc);
+                InputStreamReader fr = new InputStreamReader(new FileInputStream(file.getAbsoluteFile().getParent() + "\\" + FilenameUtils.getBaseName(file.getName()) + "-segmented.txt"), enc.toString());
                 sentences = MaxentTagger.tokenizeText(new BufferedReader(fr));
             } catch (FileNotFoundException e) {
                 // TODO Auto-generated catch block
@@ -142,7 +152,7 @@ public class NLPHelper {
             for (List<HasWord> sentence : sentences) {
                 List<TaggedWord> taggedSentence = tagger.tagSentence(sentence);
                 try {
-                    FileUtils.writeStringToFile(new File(outputFilePath), SentenceUtils.listToString(taggedSentence, false), "UTF-8");
+                    FileUtils.writeStringToFile(new File(outputFilePath), SentenceUtils.listToString(taggedSentence, false), enc, true);
                 } catch (IOException e) {
                     // TODO Auto-generated catch block
                     e.printStackTrace();
@@ -152,13 +162,26 @@ public class NLPHelper {
         
     }
 
-    private static void createOutputFile(String filename){
+    private static void createOutputFile(File file, NLPProcess process){
         final String fileExtension = ".txt";
-        filename = ".\\output\\" + filename + fileExtension;
+        String filePath = file.getAbsoluteFile().getParent();
+        String fileName = FilenameUtils.getBaseName(file.getName());
+        switch (process) {
+            case SEGMENT:
+                fileName = filePath + "\\" + fileName + "-segmented" + fileExtension;
+                break;
+            case POSTAG:
+                fileName = filePath + "\\" + fileName + "-tagged" + fileExtension;
+                break;
+        }
         try{
-            File outputFile = new File(filename);
+            File outputFile = new File(fileName);
             FileUtils.forceMkdirParent(outputFile);
-            outputFilePath = filename;
+            if(!outputFile.createNewFile()) {
+                outputFile.delete();
+                outputFile.createNewFile();
+            }
+            outputFilePath = fileName;
         } 
         catch (IOException e) {
             System.out.println("There was a problem creating the output file.");
