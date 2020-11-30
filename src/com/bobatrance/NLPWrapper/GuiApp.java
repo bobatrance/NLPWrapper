@@ -47,6 +47,14 @@ public class GuiApp {
         panelBrowse.add(buttonBrowse);
         panelSelectionL.add(panelBrowse);
 
+        JPanel panelExport = new JPanel();
+        JLabel labelExport = new JLabel("Export the file list: ");
+        panelExport.add(labelExport);
+        JButton buttonExport = new JButton("Export");
+        labelExport.setLabelFor(buttonExport);
+        panelExport.add(buttonExport);
+        panelSelectionL.add(panelExport);
+
         JPanel panelClear = new JPanel();
         JLabel labelClear = new JLabel("Clear the file list: ");
         panelClear.add(labelClear);
@@ -124,6 +132,18 @@ public class GuiApp {
                         // TODO Auto-generated catch block
                         e1.printStackTrace();
                     }
+                }
+            }
+        });
+
+        buttonExport.addActionListener(new ActionListener() {
+            public void actionPerformed(ActionEvent e) {
+                if (fileList.size() == 0) {
+                    JOptionPane.showMessageDialog(frame, "No files selected!", "File Export", JOptionPane.ERROR_MESSAGE);   
+                }
+                else {
+                    MiscHelper.ExportFileList(fileList);
+                    JOptionPane.showMessageDialog(frame, "File list created!", "File Export", JOptionPane.INFORMATION_MESSAGE);
                 }
             }
         });
